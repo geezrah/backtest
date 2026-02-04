@@ -81,3 +81,53 @@ ggsave("output/national_trend.png", plot = trend_plot, width = 8, height = 6)
 
 print("Analysis complete. All files saved to 'data/' and 'output/' folders.")
 
+# 7. RISK CATEGORIZATION (Feature Work)
+# We define 'High Risk' as any county with MMR above the national median
+
+national_median <- median(kenya_health_data$mmr)
+
+kenya_health_data <- kenya_health_data %>%
+  mutate(risk_level = ifelse(mmr > national_median, "High Risk", "Standard Risk"))
+
+# Plot C: Density Plot of MMR
+# This shows the "shape" of health outcomes in the country
+density_plot <- ggplot(kenya_health_data, aes(x = mmr, fill = risk_level)) +
+  geom_density(alpha = 0.5) +
+  geom_vline(aes(xintercept = national_median), linetype = "dashed", linewidth = 1) +
+  labs(title = "Distribution of Maternal Mortality Risk",
+       subtitle = paste("Dashed line represents the National Median:", round(national_median, 2)),
+       x = "Maternal Mortality Rate", y = "Density") +
+  scale_fill_manual(values = c("High Risk" = "#d95f02", "Standard Risk" = "#1b9e77")) +
+  theme_minimal()
+
+# Save this new specific analysis
+ggsave("output/risk_distribution.png", plot = density_plot)
+
+# 8. SUMMARY TABLE (For the presentation)
+risk_summary <- kenya_health_data %>%
+  group_by(risk_level) %>%
+  summarise(
+    avg_skilled_attendance = mean(skilled_attendants_pct),
+    count = n()
+  )
+
+print(risk_summary)
+# 9. GENERATING THE POLICY REPORT
+# Identify counties that need the most attention vs those performing well
+
+policy_report <- kenya_health_data %>%
+  filter(year == 2023) %>% # Focus on the most recent year
+  arrange(desc(mmr)) %>%
+  select(county, skilled_attendants_pct, mmr) %>%
+  mutate(
+    priority_status = ifelse(mmr > 350, "Urgent Intervention", "Monitor"),
+    recommendation = ifelse(skilled_attendants_pct < 60, "Increase Health Staffing", "Invest in Facilities")
+  )
+
+# Save the report
+write.csv(policy_report, "output/kenya_health_policy_report.csv", row.names = FALSE)
+
+# Print a nice summary to the console for the audience
+cat("\n--- Final Policy Insights (2023) ---\n")
+print(head(policy_report, 5))
+
