@@ -103,4 +103,31 @@ density_plot <- ggplot(kenya_health_data, aes(x = mmr, fill = risk_level)) +
 # Save this new specific analysis
 ggsave("output/risk_distribution.png", plot = density_plot)
 
+# 8. SUMMARY TABLE (For the presentation)
+risk_summary <- kenya_health_data %>%
+  group_by(risk_level) %>%
+  summarise(
+    avg_skilled_attendance = mean(skilled_attendants_pct),
+    count = n()
+  )
+
+print(risk_summary)
+# 9. GENERATING THE POLICY REPORT
+# Identify counties that need the most attention vs those performing well
+
+policy_report <- kenya_health_data %>%
+  filter(year == 2023) %>% # Focus on the most recent year
+  arrange(desc(mmr)) %>%
+  select(county, skilled_attendants_pct, mmr) %>%
+  mutate(
+    priority_status = ifelse(mmr > 350, "Urgent Intervention", "Monitor"),
+    recommendation = ifelse(skilled_attendants_pct < 60, "Increase Health Staffing", "Invest in Facilities")
+  )
+
+# Save the report
+write.csv(policy_report, "output/kenya_health_policy_report.csv", row.names = FALSE)
+
+# Print a nice summary to the console for the audience
+cat("\n--- Final Policy Insights (2023) ---\n")
+print(head(policy_report, 5))
 
